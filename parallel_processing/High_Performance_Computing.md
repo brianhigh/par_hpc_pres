@@ -345,7 +345,7 @@ ggplot(df, aes(`# Cores`, `Time (s)`, color = Batched)) +
 
 ## Exercise #4: Parallel processing (results)
 
-Your results to look something like this: 
+Your results should look something like this: 
 
 ![](img/parLapply_test.png)
 
