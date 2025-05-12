@@ -1,7 +1,7 @@
 # Determine the optimal number of CPU cores to use for the fastest processing of 
 # an analysis. This example uses the flights dataset from {nycflights13} and  
 # lm() is run in parallel with mclapply() on Linux or macOS systems and with 
-# parLapply() on Windows systems. Times are measured with microbenchmark.
+# parLapply() on Windows systems. Times are measured with microbenchmark().
 #
 # Tested on UW Hyak (klone) with 16 CPU cores and 4 GB RAM allocated to 1 node.
 # Tested on macOS Sequoia 15.4.1 on a 2020 M1 Macbook Pro with 16 GB RAM.
@@ -102,7 +102,7 @@ mean(res$time)/10^9
 # Seems to be about as fast as simply running with mclapply() directly on Linux.
 
 # Automate testing with 1, 2, 4, 8, and 16 cores.
-ncores <- sapply(0:4, function(n) 2^n)
+ncores <- sapply(0:log2(16), function(n) 2^n)
 ncores
 
 # Define a function to test processing with various numbers of CPU cores
