@@ -1,19 +1,70 @@
 # Install all R packages used by scripts in this repository
 
+# Clear workspace of all objects and unload all extra (non-base) packages.
+rm(list = ls(all = TRUE))
+if (!is.null(sessionInfo()$otherPkgs)) {
+  res <- suppressWarnings(
+    lapply(paste('package:', names(sessionInfo()$otherPkgs), sep=""),
+           detach, character.only=TRUE, unload=TRUE, force=TRUE))
+}
+
 # Force use of personal R library folder, creating as needed
 lib_dir <- Sys.getenv("R_LIBS_USER")
 if (!dir.exists(lib_dir)) dir.create(lib_dir, recursive = TRUE)
 .libPaths(lib_dir, include.site = FALSE)
 
-# Set repository URL
-r <- getOption("repos")
-r["CRAN"] <- "https://cloud.r-project.org"
-options(repos = r)
+# Choose appropriate repository URL based on operating system
+if (Sys.info()["sysname"] == "Linux") {
+  # Find linux distribution and version
+  lsb_release <- system(command = "lsb_release -a", intern = TRUE, 
+                        ignore.stderr = TRUE)
+  x <- as.data.frame(lsb_release)
+  df <- data.frame(strsplit(x$lsb_release, ":\\t"))
+  names(df) <- lapply(df[1, ], as.character)
+  df <- df[-1,] 
+  
+  if (df$`Distributor ID` %in% c("Debian", "Ubuntu")) {
+    # Set repository URL for binary packages hosted by Posit
+    repo_url <- 
+      sprintf("https://packagemanager.posit.co/cran/__linux__/%s/latest", 
+              df$Codename)
+  } else {
+    # Set repository URL for CRAN mirror
+    repo_url <- "https://cloud.r-project.org"
+  }
+  
+} else {
+  # Set repository URL for CRAN mirror
+  #repo_url <- "https://packagemanager.posit.co/cran/latest"
+  repo_url <- "https://cloud.r-project.org"
+}
 
-# Install pacman, as needed
-if (!requireNamespace("pacman", quietly = TRUE)) install.packages("pacman")
+# Set option for HTTP User Agent to include R version information in header
+# See: https://www.r-bloggers.com/2023/07/posit-package-manager-for-linux-r-binaries/
+local(options(HTTPUserAgent = sprintf(
+  "R/%s R (%s)",
+  getRversion(),
+  paste(
+    getRversion(),
+    R.version["platform"],
+    R.version["arch"],
+    R.version["os"]
+  )
+)))
 
-# Install other packages, as needed
-pacman::p_load(benchmarkme, memuse, parallel, robustbase, MASS, here, tibble, 
-               ggplot2, broom, microbenchmark, nycflights13, dplyr, furrr, 
-               purrr, tidyr, tictoc)
+# Set CRAN package repository URL
+local(options(repos = c(CRAN = repo_url)))
+
+# Define a function to conditionally install packages, if needed
+pkg_inst <- function(pkgs) {
+  if (!requireNamespace("pak", quietly = TRUE)) install.packages("pak")
+  res <- sapply(pkgs, function(pkg) {
+    if (!requireNamespace(pkg, quietly = TRUE)) pak::pkg_install(pkg)
+  })
+}
+
+# Install packages, as needed
+pkgs <- c("benchmarkme", "memuse", "parallel", "robustbase", "MASS", "here", 
+          "tibble", "ggplot2", "broom", "microbenchmark", "nycflights13", 
+          "dplyr", "furrr", "purrr", "tidyr", "tictoc", "pacman")
+pkg_inst(pkgs)
