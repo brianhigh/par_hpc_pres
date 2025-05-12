@@ -317,7 +317,7 @@ stopCluster(cl)
 As you scale to more CPU cores, R will need to copy itself and your data to 
 each core. This involves extra overhead. Let's see this in action.
 
-- Run the previous example on SPH RStudio Server and note your execution times.
+- Run the previous example in RStudio and note your execution times.
 - Try using different number of cores (up to 8) and compare the resulting times.
   
 **Note**: If many people run this at the same time, there may be competition for 
