@@ -349,7 +349,7 @@ the results as a scatter plot.
 
 You should expect your plot to look something like this: 
 
-![](img/parLapply_test_sm.png)
+![](img/parLapply_test.png)
 
 Tip: For your own projects, do a test like this with a small subset of your 
 data to find the "sweet spot".
