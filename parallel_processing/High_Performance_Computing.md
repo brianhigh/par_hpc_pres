@@ -277,7 +277,7 @@ Given this function:
 
 ``` r
 # Attach packages, installing as needed
-pacman::p_load(parallel, robustbase, MASS)
+pacman::p_load(parallel, robustbase, MASS, here, tibble, ggplot2)
 
 # Calculate robust covariance
 rc <- function(x) {
@@ -298,19 +298,17 @@ and several CPU cores.
 
 ``` r
 # Single core version using `lappy()`
-system.time(result_single <- lapply(1:1000, rc))
-## ~ 5-6 seconds elapsed time (using 1 core)
+system.time(result_single <- lapply(1:800, rc))
 
 # Parallel (multicore) version using `mclapply()` and `mc.cores = 4`
-system.time(result_multi <- mclapply(1:1000, rc, mc.cores = 4))
-## ~ 2-3 seconds elapsed time (~ 2x speed improvement using 4 cores)
+system.time(result_multi <- mclapply(1:800, rc, mc.cores = 4))
 ## NOTE: Windows does not support mclapply() with mc.cores > 1 (multicore).
 
 # Parallel (multicore) version using `parLapply()` and `makeCluster(4)`
 cl <- makeCluster(4) 
-system.time(result_multi <- parLapply(cl, 1:1000, rc))
+system.time(result_multi <- parLapply(cl, 1:800, rc))
 stopCluster(cl)
-## ~ 1-2 seconds elapsed time (~ 3x speed improvement using 4 cores)
+# This may be faster or slower than mclapply(), depending on your situation.
 ```
 
 ## Exercise #4: Parallel processing overhead
@@ -324,32 +322,32 @@ each core. This involves extra overhead. Let's see this in action.
 **Q4**: Do more cores improve speed linearly? If not, how would you describe it? 
 Is there a "sweet spot", beyond which adding more cores is not really worth it?
 
-## Exercise #4: Parallel processing
-
-**Hint**: Here is R code that might help answer some of the previous questions.
+## Exercise #4: Parallel processing (hint)
 
 
 ``` r
 # Time the running of a task with varying number of CPU cores, then plot.
 # Use parLapply() instead of mclapply() to support Windows.
-N <- 1:6
-res <- sapply(N, function(n, .data = 1:1000) { 
-  # if (n > 1) .data <- split(.data, cut(.data, breaks = n))   # Batch by n
+fun <- function(n, .data = 1:800, batch = FALSE) { 
+  if (batch & n > 1) .data <- split(.data, cut(.data, breaks = n))
   system.time({ cl <- makeCluster(n) 
                 system.time(res_n <- parLapply(cl, .data, rc))
                 stopCluster(cl) })[['elapsed']]
-})
-plot(N, res, pch = 19, xlab = "Number of Cores", ylab = "Elapsed time (s)") 
+}
+N <- c(1, 2, 4, 8)
+T1 <- sapply(N, fun, batch = FALSE)
+T2 <- sapply(N, fun, batch = TRUE)
+df <- tibble(`# Cores` = c(N, N), `Time (s)` = c(T1, T2), 
+             Batched = rep(c(F, T), each = length(N)))
+ggplot(df, aes(`# Cores`, `Time (s)`, color = Batched)) + 
+       geom_line() + theme_light()
 ```
 
-This code will run `parLapply()` for each N number of cores to use and plot 
-the results as a scatter plot. 
+## Exercise #4: Parallel processing (results)
 
-## Exercise #4: Parallel processing
-
-You should expect your plot to look something like this: 
+Your results to look something like this: 
 
 ![](img/parLapply_test.png)
 
 Tip: For your own projects, do a test like this with a small subset of your 
-data to find the "sweet spot".
+data to find the "sweet spot". Here, that spot is 4 cores.
