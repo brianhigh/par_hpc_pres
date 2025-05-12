@@ -173,3 +173,6 @@ res_df_batched_delta
 # resources are limited, especially on a shared system like a compute cluster 
 # such as hyak, so limiting to 4 or 8 cores might be "fast enough" and would 
 # allow others to use those remaining cores.
+
+# Find out how much memory (RAM) was used (maximum).
+paste(as.character(round(sum(sum(gc()[, 6]))/1000, 2)), "Gbytes RAM 'max used'")
