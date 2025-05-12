@@ -319,9 +319,6 @@ each core. This involves extra overhead. Let's see this in action.
 
 - Run the previous example in RStudio and note your execution times.
 - Try using different number of cores (up to 8) and compare the resulting times.
-  
-**Note**: If many people run this at the same time, there may be competition for 
-the server's resources and this may increase execution times - for **everyone**.
 
 **Q4**: Do more cores improve speed linearly? If not, how would you describe it? 
 Is there a "sweet spot", beyond which adding more cores is not really worth it?
