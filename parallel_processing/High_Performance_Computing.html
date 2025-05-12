@@ -3502,6 +3502,7 @@ stopCluster(cl)
 # Use parLapply() instead of mclapply() to support Windows.
 N &lt;- 1:6
 res &lt;- sapply(N, function(n, .data = 1:1000) { 
+  # if (n &gt; 1) .data &lt;- split(.data, cut(.data, breaks = n))   # Batch by n
   system.time({ cl &lt;- makeCluster(n) 
                 system.time(res_n &lt;- parLapply(cl, .data, rc))
                 stopCluster(cl) })[[&#39;elapsed&#39;]]

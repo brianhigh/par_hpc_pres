@@ -334,6 +334,7 @@ Is there a "sweet spot", beyond which adding more cores is not really worth it?
 # Use parLapply() instead of mclapply() to support Windows.
 N <- 1:6
 res <- sapply(N, function(n, .data = 1:1000) { 
+  # if (n > 1) .data <- split(.data, cut(.data, breaks = n))   # Batch by n
   system.time({ cl <- makeCluster(n) 
                 system.time(res_n <- parLapply(cl, .data, rc))
                 stopCluster(cl) })[['elapsed']]
