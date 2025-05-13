@@ -188,47 +188,34 @@ R.version[c('version.string', 'platform')]
 
 ## Parallel processing
 
-Parallel processing is when a system performs multiple operations simultaneously.
+Parallel processing is when a system performs multiple operations simultaneously:
 
-There are four main types of parallelism in computing:
+- to decrease run time (speed-up)
+- to increase problem size (scale-up)
+- to save energy (power, cooling, etc.)
 
-- Process-based (multiple computers with message passing)
-- Thread-based (multiple cores with shared memory)
-- Vectorization (multiple calculations per core)
-- Stream processing (utilize special processors like GPUs)
+Generally, you will need to utilize multiple CPU (or GPU) cores on one or 
+multiple computers to achieve parallel processing. Today, we will focus on 
+multi-core parallelism with CPU "cores". 
 
-For today's discussion, we will focus on **thread-based parallelism**.
-
-## Process and thread-based parallelism
-
-In practical terms, parallel processing means your application or code can 
-utilize more than one CPU (or GPU) "core", on one or more computers, at the 
-same time.
-
-Many CPUs are "hyper-threaded", meaning that every physical CPU core will 
-offer two virtual cores. This means an 8-core hyper-threaded CPU offers 16 
-vCPU cores. (R sees these vCPUs as if they were physical CPU cores.)
-
-For example, R will only use one CPU "core" by default, but you can write 
-your R scripts to use multiple cores with special packages and functions.
-
-## When to use parallel processing?
-
-- When you want to decrease run time (speed-up)
-- When you want to increase problem size (scale-up)
-- When you want to save energy (power, cooling, etc.)
+A CPU core is a processing unit within a CPU chip that can execute instructions 
+independently. For example, if you have 4 cores, you can run 4 operations 
+simultaneously.
 
 ## Parallel processing: the good & bad news
 
 Good news:
 
 - Almost every modern computer has multiple CPU cores.
-- Some utility programs support parallel processing.
+- Some software applications support parallel processing.
 
 Bad news:
 
-- Many data analysis apps and languages, like R, are single-core by default.
-- You will likely have to modify your code or workflow for parallel support.
+- Many data analysis tools, like R, are single-core by default so you will
+  likely have to modify your code for parallel support.
+- Parallel performance does not scale up linearly, due to overhead.
+- Some tasks are inherently serial and cannot be run in parallel, such as 
+  performing a single calculation on your entire dataset.
 
 ## Exercise #3: Know your resources
 

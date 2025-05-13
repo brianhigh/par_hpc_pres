@@ -3367,34 +3367,17 @@ have not been successful.</pre>
 
 </article></slide><slide class=""><hgroup><h2>Parallel processing</h2></hgroup><article  id="parallel-processing">
 
-<p>Parallel processing is when a system performs multiple operations simultaneously.</p>
-
-<p>There are four main types of parallelism in computing:</p>
+<p>Parallel processing is when a system performs multiple operations simultaneously:</p>
 
 <ul>
-<li>Process-based (multiple computers with message passing)</li>
-<li>Thread-based (multiple cores with shared memory)</li>
-<li>Vectorization (multiple calculations per core)</li>
-<li>Stream processing (utilize special processors like GPUs)</li>
+<li>to decrease run time (speed-up)</li>
+<li>to increase problem size (scale-up)</li>
+<li>to save energy (power, cooling, etc.)</li>
 </ul>
 
-<p>For today’s discussion, we will focus on <strong>thread-based parallelism</strong>.</p>
+<p>Generally, you will need to utilize multiple CPU (or GPU) cores on one or multiple computers to achieve parallel processing. Today, we will focus on multi-core parallelism with CPU &ldquo;cores&rdquo;.</p>
 
-</article></slide><slide class=""><hgroup><h2>Process and thread-based parallelism</h2></hgroup><article  id="process-and-thread-based-parallelism">
-
-<p>In practical terms, parallel processing means your application or code can utilize more than one CPU (or GPU) &ldquo;core&rdquo;, on one or more computers, at the same time.</p>
-
-<p>Many CPUs are &ldquo;hyper-threaded&rdquo;, meaning that every physical CPU core will offer two virtual cores. This means an 8-core hyper-threaded CPU offers 16 vCPU cores. (R sees these vCPUs as if they were physical CPU cores.)</p>
-
-<p>For example, R will only use one CPU &ldquo;core&rdquo; by default, but you can write your R scripts to use multiple cores with special packages and functions.</p>
-
-</article></slide><slide class=""><hgroup><h2>When to use parallel processing?</h2></hgroup><article  id="when-to-use-parallel-processing">
-
-<ul>
-<li>When you want to decrease run time (speed-up)</li>
-<li>When you want to increase problem size (scale-up)</li>
-<li>When you want to save energy (power, cooling, etc.)</li>
-</ul>
+<p>A CPU core is a processing unit within a CPU chip that can execute instructions independently. For example, if you have 4 cores, you can run 4 operations simultaneously.</p>
 
 </article></slide><slide class=""><hgroup><h2>Parallel processing: the good &amp; bad news</h2></hgroup><article  id="parallel-processing-the-good-bad-news">
 
@@ -3402,14 +3385,15 @@ have not been successful.</pre>
 
 <ul>
 <li>Almost every modern computer has multiple CPU cores.</li>
-<li>Some utility programs support parallel processing.</li>
+<li>Some software applications support parallel processing.</li>
 </ul>
 
 <p>Bad news:</p>
 
 <ul>
-<li>Many data analysis apps and languages, like R, are single-core by default.</li>
-<li>You will likely have to modify your code or workflow for parallel support.</li>
+<li>Many data analysis tools, like R, are single-core by default so you will likely have to modify your code for parallel support.</li>
+<li>Parallel performance does not scale up linearly, due to overhead.</li>
+<li>Some tasks are inherently serial and cannot be run in parallel, such as performing a single calculation on your entire dataset.</li>
 </ul>
 
 </article></slide><slide class=""><hgroup><h2>Exercise #3: Know your resources</h2></hgroup><article  id="exercise-3-know-your-resources">
@@ -3510,7 +3494,7 @@ N &lt;- c(1, 2, 4, 8)
 T1 &lt;- sapply(N, fun, batch = FALSE)
 T2 &lt;- sapply(N, fun, batch = TRUE)
 df &lt;- tibble(`# Cores` = c(N, N), `Time (s)` = c(T1, T2), 
-             Batched = rep(c(F, T), each = length(N)))
+             Batched = rep(c(FALSE, TRUE), each = length(N)))
 ggplot(df, aes(`# Cores`, `Time (s)`, color = Batched)) + 
        geom_line() + theme_light()</pre>
 
