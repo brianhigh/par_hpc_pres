@@ -156,7 +156,7 @@ Think of Open OnDemand as a **web portal** to a login node.
 
 ## Exercise #1: Run RStudio (hyak, SPH, or local)
 
-**A. Hyak OnDemand RStudio Server** (preferred, but OFFLINE today)
+**A. Hyak OnDemand RStudio Server** (preferred)
 
 - Go to: https://ondemand.hyak.uw.edu & log in with UW Netid.
 - Click "Interactive Apps" -> RStudio, fill out form, and press LAUNCH.
