@@ -131,7 +131,7 @@ Some HPC systems also support:
 
 A **compute cluster** is a collection of computers configured with:
 
-- A **head node** that runs a **job scheduler**
+- A **head node** (login node) that runs a **job scheduler**
 - One or more **compute nodes**
 - **Access control** to limit access to the cluster 
 
@@ -146,7 +146,7 @@ You will want to use a compute cluster when:
 
 ## What are head and compute nodes?
 
-The **head node** is where you:
+The **head node** (login node) is where you:
 
 - **Connect** to the cluster
 - **Configure** your software environment (e.g., install packages)
@@ -155,6 +155,8 @@ The **head node** is where you:
 - Transfer data into and out of the cluster
 
 The **compute nodes** are where you **run** your jobs and interactive sessions.
+
+Think of Open OnDemand as a **web portal** to a login node.
 
 ## Exercise #1: Run RStudio (hyak, SPH, or local)
 
@@ -195,17 +197,19 @@ There are four main types of parallelism in computing:
 - Vectorization (multiple calculations per core)
 - Stream processing (utilize special processors like GPUs)
 
+For today's discussion, we will focus on **thread-based parallelism**.
+
 ## Process and thread-based parallelism
 
 In practical terms, parallel processing means your application or code can 
 utilize more than one CPU (or GPU) "core", on one or more computers, at the 
 same time.
 
-Many CPUs are "hyper-threaded", meaning that every physical CPU core will be 
+Many CPUs are "hyper-threaded", meaning that every physical CPU core will 
 offer two virtual cores. This means an 8-core hyper-threaded CPU offers 16 
 vCPU cores. (R sees these vCPUs as if they were physical CPU cores.)
 
-For example, R will only use one CPU core by default, but you can write 
+For example, R will only use one CPU "core" by default, but you can write 
 your R scripts to use multiple cores with special packages and functions.
 
 ## When to use parallel processing?

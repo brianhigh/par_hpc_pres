@@ -3301,7 +3301,7 @@ have not been successful.</pre>
 <p>A <strong>compute cluster</strong> is a collection of computers configured with:</p>
 
 <ul>
-<li>A <strong>head node</strong> that runs a <strong>job scheduler</strong></li>
+<li>A <strong>head node</strong> (login node) that runs a <strong>job scheduler</strong></li>
 <li>One or more <strong>compute nodes</strong></li>
 <li><strong>Access control</strong> to limit access to the cluster</li>
 </ul>
@@ -3319,7 +3319,7 @@ have not been successful.</pre>
 
 </article></slide><slide class=""><hgroup><h2>What are head and compute nodes?</h2></hgroup><article  id="what-are-head-and-compute-nodes">
 
-<p>The <strong>head node</strong> is where you:</p>
+<p>The <strong>head node</strong> (login node) is where you:</p>
 
 <ul>
 <li><strong>Connect</strong> to the cluster</li>
@@ -3330,6 +3330,8 @@ have not been successful.</pre>
 </ul>
 
 <p>The <strong>compute nodes</strong> are where you <strong>run</strong> your jobs and interactive sessions.</p>
+
+<p>Think of Open OnDemand as a <strong>web portal</strong> to a login node.</p>
 
 </article></slide><slide class=""><hgroup><h2>Exercise #1: Run RStudio (hyak, SPH, or local)</h2></hgroup><article  id="exercise-1-run-rstudio-hyak-sph-or-local">
 
@@ -3376,13 +3378,15 @@ have not been successful.</pre>
 <li>Stream processing (utilize special processors like GPUs)</li>
 </ul>
 
+<p>For today’s discussion, we will focus on <strong>thread-based parallelism</strong>.</p>
+
 </article></slide><slide class=""><hgroup><h2>Process and thread-based parallelism</h2></hgroup><article  id="process-and-thread-based-parallelism">
 
 <p>In practical terms, parallel processing means your application or code can utilize more than one CPU (or GPU) &ldquo;core&rdquo;, on one or more computers, at the same time.</p>
 
-<p>Many CPUs are &ldquo;hyper-threaded&rdquo;, meaning that every physical CPU core will be offer two virtual cores. This means an 8-core hyper-threaded CPU offers 16 vCPU cores. (R sees these vCPUs as if they were physical CPU cores.)</p>
+<p>Many CPUs are &ldquo;hyper-threaded&rdquo;, meaning that every physical CPU core will offer two virtual cores. This means an 8-core hyper-threaded CPU offers 16 vCPU cores. (R sees these vCPUs as if they were physical CPU cores.)</p>
 
-<p>For example, R will only use one CPU core by default, but you can write your R scripts to use multiple cores with special packages and functions.</p>
+<p>For example, R will only use one CPU &ldquo;core&rdquo; by default, but you can write your R scripts to use multiple cores with special packages and functions.</p>
 
 </article></slide><slide class=""><hgroup><h2>When to use parallel processing?</h2></hgroup><article  id="when-to-use-parallel-processing">
 
