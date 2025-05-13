@@ -340,7 +340,7 @@ N <- c(1, 2, 4, 8)
 T1 <- sapply(N, fun, batch = FALSE)
 T2 <- sapply(N, fun, batch = TRUE)
 df <- tibble(`# Cores` = c(N, N), `Time (s)` = c(T1, T2), 
-             Batched = rep(c(F, T), each = length(N)))
+             Batched = rep(c(FALSE, TRUE), each = length(N)))
 ggplot(df, aes(`# Cores`, `Time (s)`, color = Batched)) + 
        geom_line() + theme_light()
 ```
