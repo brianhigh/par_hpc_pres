@@ -160,7 +160,7 @@ Think of Open OnDemand as a **web portal** to a login node.
 
 ## Exercise #1: Run RStudio (hyak, SPH, or local)
 
-**A. Hyak OnDemand RStudio Server** (preferred)
+**A. Hyak OnDemand RStudio Server** (preferred, but OFFLINE today)
 
 - Go to: https://ondemand.hyak.uw.edu & log in with UW Netid.
 - Click "Interactive Apps" -> RStudio, fill out form, and press LAUNCH.
@@ -213,7 +213,7 @@ Bad news:
 
 - Many data analysis tools, like R, are single-core by default so you will
   likely have to modify your code for parallel support.
-- Parallel performance does not scale up linearly, due to overhead.
+- Parallel performance may not scale up linearly, due to overhead.
 - Some tasks are inherently serial and cannot be run in parallel, such as 
   performing a single calculation on your entire dataset.
 
