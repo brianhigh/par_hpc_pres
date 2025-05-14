@@ -244,7 +244,7 @@ memuse::Sys.meminfo()
 
 ```
 ## Totalram:  157.207 GiB 
-## Freeram:   148.388 GiB
+## Freeram:   149.772 GiB
 ```
 
 ``` r
@@ -306,14 +306,14 @@ and several CPU cores.
 
 
 ``` r
-# Single core version using `lappy()`
+# Single core version using `lapply()`
 system.time(result_single <- lapply(1:800, rc))
 
-# Parallel (multicore) version using `mclapply()` and `mc.cores = 4`
+# Parallel (multi-core) version using `mclapply()` and `mc.cores = 4`
 system.time(result_multi <- mclapply(1:800, rc, mc.cores = 4))
-## NOTE: Windows does not support mclapply() with mc.cores > 1 (multicore).
+## NOTE: Windows does not support mclapply() with mc.cores > 1 (multi-core).
 
-# Parallel (multicore) version using `parLapply()` and `makeCluster(4)`
+# Parallel (multi-core) version using `parLapply()` and `makeCluster(4)`
 cl <- makeCluster(4) 
 system.time(result_multi <- parLapply(cl, 1:800, rc))
 stopCluster(cl)
@@ -333,10 +333,14 @@ Is there a "sweet spot", beyond which adding more cores is not really worth it?
 
 ## Exercise #4: Parallel processing (hint)
 
+First, let's make a "wrapper" function, `fun()` to run `rc()` using n cores. We
+will add a few new features, such as the option to group the data into n batches 
+and to use `microbenchmark()` allowing us to replicate each test run `times` 
+times to get execution time averages.
+
 
 ``` r
-# Time the running of a task with varying number of CPU cores, then plot.
-
+# Define a function to automate a multi-core comparison test.
 fun <- function(n, .data = 1:800, batch = FALSE, times = 1, ...) { 
   # If batch == TRUE then split the dataset by the number of cores used.
   if (batch & n > 1) .data <- split(.data, cut(.data, breaks = n))
@@ -351,7 +355,16 @@ fun <- function(n, .data = 1:800, batch = FALSE, times = 1, ...) {
 
   return(mean(res$time)/10^9)
 }
+```
 
+Now we can run this function `length(N)` times, where `N` is a vector of the 
+number of cores to supply to the function as `n`. We will use a series of powers 
+of two, so that we can compare the doubling and redoubling of the number of 
+cores used in each test.
+
+
+``` r
+# Time the running of a task with varying number of CPU cores, then plot.
 N <- c(1, 2, 4, 8)   # 2^(0:3)
 T1 <- sapply(N, fun, batch = FALSE)
 T2 <- sapply(N, fun, batch = TRUE)
@@ -373,12 +386,35 @@ help a little.
 If the task used a larger dataset, and therefore more memory (RAM), batching 
 would have provided an even greater performance boost.
 
-Let's try again, but with the data size inflated 16 times.
+For example, consider the MASS::Cars93 dataset that we are using for this test. 
+We can compare the amount of memory used when we increase the size 16 times.
+
+
+``` r
+# Create a copy of the dataframe and measure its memory usage.
+df <- MASS::Cars93
+dfsz <- utils::object.size(df)
+
+# Combine 16 copies of the dataframe and measure its memory usage.
+df <- do.call('rbind', lapply(1:16, function(i) df))
+dfszinf <- utils::object.size(df)
+
+# Calculate the % increase in memory usage after combining 16 copies of Cars93.
+paste0(c(round((100 * (dfszinf - dfsz)/dfsz), 1)), '%')
+```
+
+```
+## [1] "502.1%"
+```
+
+Combining 16 copies of the Cars93 dataset increased the memory used by 
+about five times.
+
+Let's try the multi-core test again, but with the data size inflated 16 times.
 
 
 ``` r
 # Repeat the previous test, but increase the data size by `inflate_mult` times.
-
 N <- c(1, 2, 4, 8)   # 2^(0:3)
 T1 <- sapply(N, fun, batch = FALSE, times = 3, inflate_mult = 16)
 T2 <- sapply(N, fun, batch = TRUE, times = 3, inflate_mult = 16)
