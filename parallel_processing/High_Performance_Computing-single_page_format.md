@@ -9,11 +9,7 @@ editor_options:
   chunk_output_type: console
 ---
 
-```{r setup, echo=FALSE, message=FALSE, warning=FALSE}
-suppressMessages(library(knitr))
-opts_chunk$set(tidy = FALSE, cache = FALSE, echo = TRUE)
-if (!requireNamespace("pacman", quietly = TRUE)) install.packages("pacman")
-```
+
 
 ## High Performance Computing (HPC)
 
@@ -164,8 +160,15 @@ Think of Open OnDemand as a **web portal** to a login node.
 
 **Q1**: What R version is RStudio using? On which platform?
 
-```{r}
+
+``` r
 R.version[c('version.string', 'platform')]
+```
+
+```
+##                _                                          
+## version.string R version 4.2.2 Patched (2022-11-10 r83330)
+## platform       x86_64-pc-linux-gnu
 ```
 
 ## Exercise #2: Upload and Download files using RStudio Server
@@ -212,19 +215,39 @@ Bad news:
 
 **Q3**: What system resources are available? This R code will tell you:
 
-```{r}
+
+``` r
 # Attach packages, installing as needed
 pacman::p_load(benchmarkme, memuse)
 
 # A. Find operating system (OS) type (Note: "Darwin" means macOS)
 benchmarkme::get_sys_details()$sys_info$sysname
+```
 
+```
+## [1] "Linux"
+```
+
+``` r
 # B. Find number of (virtual) CPU cores
 benchmarkme::get_cpu()$no_of_cores
+```
 
+```
+## [1] 10
+```
+
+``` r
 # C. Find total system RAM ("Random Access Memory", i.e., "working memory")
 memuse::Sys.meminfo()
+```
 
+```
+## Totalram:  157.207 GiB 
+## Freeram:   144.237 GiB
+```
+
+``` r
 # Find storage usage for home disk (or volume)
 cmd <- list(
     unix = "df -h ~", 
@@ -253,7 +276,8 @@ Once you have developed a script to perform your task, you will want to:
 
 Given this function:
 
-```{r}
+
+``` r
 # Attach packages, installing as needed
 pacman::p_load(parallel, robustbase, MASS, here, tibble, ggplot2)
 
@@ -271,7 +295,8 @@ rc <- function(x) {
 Execute the above function many times (just to create extra CPU load) with one 
 and several CPU cores.
 
-```{r, eval = FALSE}
+
+``` r
 # Single core version using `lappy()`
 system.time(result_single <- lapply(1:800, rc))
 
@@ -299,7 +324,8 @@ Is there a "sweet spot", beyond which adding more cores is not really worth it?
 
 ## Exercise #4: Parallel processing (hint)
 
-```{r ex04}
+
+``` r
 # Time the running of a task with varying number of CPU cores, then plot.
 # Use parLapply() instead of mclapply() to support Windows.
 fun <- function(n, .data = 1:800, batch = FALSE) { 
@@ -320,14 +346,17 @@ ggplot(df, aes(`# Cores`, `Time (s)`, color = Batched)) +
        geom_line() + theme_light()
 ```
 
+![](High_Performance_Computing-single_page_format_files/figure-html/ex04-1.png)<!-- -->
+
 Batching is a way to reduce overhead. You may notice that batching helped as 
 much as adding a few more cores. If the task used more memory (RAM), batching 
 would have provided an even greater performance improvement. 
 
-```{r}
+
+``` r
 ram_used <- paste(as.character(round(sum(sum(gc()[, 6]))/1000, 2)), 
                   "Gbytes RAM ('max used')")
 ```
 
-Rendering this Rmd document to HTML used `r ram_used`.
+Rendering this Rmd document to HTML used 0.23 Gbytes RAM ('max used').
 
