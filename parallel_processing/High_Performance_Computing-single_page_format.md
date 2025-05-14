@@ -244,17 +244,17 @@ memuse::Sys.meminfo()
 
 ```
 ## Totalram:  157.207 GiB 
-## Freeram:   144.237 GiB
+## Freeram:   148.388 GiB
 ```
 
 ``` r
-# Find storage usage for home disk (or volume)
+# Find available storage on home disk (or volume)
 cmd <- list(
     unix = "df -h ~", 
     windows = paste('powershell -command', 
       "$h = $ENV:HOMEDRIVE -replace '.{1}$' 
        Get-PSDrive $h | ? { $_.Provider.Name -eq 'FileSystem' }"))
-system(cmd[[.Platform$OS.type]])
+# system(cmd[[.Platform$OS.type]], intern = TRUE)   # Not run for user privacy
 ```
 
 **Discussion**: Compare the amount of free memory (RAM) with available storage. 
@@ -278,14 +278,23 @@ Given this function:
 
 
 ``` r
-# Attach packages, installing as needed
-pacman::p_load(parallel, robustbase, MASS, here, tibble, ggplot2)
+# Attach packages, installing as needed.
+pacman::p_load(parallel, robustbase, MASS, microbenchmark, tibble, ggplot2)
 
-# Calculate robust covariance
-rc <- function(x) {
+# Calculate robust covariance.
+rc <- function(x, inflate_mult = 1) {
+  # Get data
   data(Cars93, package = "MASS")
-  n <- nrow(Cars93)
-  sapply(x, function(x) {  # Repeat for every x, just to create extra work
+  df <- Cars93
+  
+  # If inflate_mult > 1, combine multiple copies of df to simulate "big data".
+  if (inflate_mult > 1) {
+    df <- do.call('rbind', lapply(1:inflate_mult, function(i) df))
+  }
+  
+  # Process data
+  n <- nrow(df)
+  sapply(x, function(x) {  # Repeat for every x, just to create extra work.
     robustbase::covMcd(Cars93[sample(1:n, replace=TRUE), 
                   c("Price", "Horsepower")], cor = TRUE)$cor[1,2]
   })
@@ -327,15 +336,23 @@ Is there a "sweet spot", beyond which adding more cores is not really worth it?
 
 ``` r
 # Time the running of a task with varying number of CPU cores, then plot.
-# Use parLapply() instead of mclapply() to support Windows.
-fun <- function(n, .data = 1:800, batch = FALSE) { 
+
+fun <- function(n, .data = 1:800, batch = FALSE, times = 1, ...) { 
+  # If batch == TRUE then split the dataset by the number of cores used.
   if (batch & n > 1) .data <- split(.data, cut(.data, breaks = n))
-  system.time({ cl <- makeCluster(n) 
-                system.time(res_n <- parLapply(cl, .data, rc))
-                stopCluster(cl) })[['elapsed']]
+  
+  # Use microbenchmark to repeat the test (`times`) and return the mean in secs.
+  res <- microbenchmark({ 
+    # Use parLapply() instead of mclapply() to support Windows.
+    cl <- makeCluster(n) 
+    system.time(res_n <- parLapply(cl, .data, rc, ...))
+    stopCluster(cl) 
+  }, times = times, unit = 'seconds')
+
+  return(mean(res$time)/10^9)
 }
 
-N <- c(1, 2, 4, 8)
+N <- c(1, 2, 4, 8)   # 2^(0:3)
 T1 <- sapply(N, fun, batch = FALSE)
 T2 <- sapply(N, fun, batch = TRUE)
 
@@ -348,15 +365,31 @@ ggplot(df, aes(`# Cores`, `Time (s)`, color = Batched)) +
 
 ![](High_Performance_Computing-single_page_format_files/figure-html/ex04-1.png)<!-- -->
 
-Batching is a way to reduce overhead. You may notice that batching helped as 
-much as adding a few more cores. If the task used more memory (RAM), batching 
-would have provided an even greater performance improvement. 
+## Batching by number of cores
+
+Batching is a way to reduce overhead. You may have noticed that batching may 
+help a little. 
+
+If the task used a larger dataset, and therefore more memory (RAM), batching 
+would have provided an even greater performance boost.
+
+Let's try again, but with the data size inflated 16 times.
 
 
 ``` r
-ram_used <- paste(as.character(round(sum(sum(gc()[, 6]))/1000, 2)), 
-                  "Gbytes RAM ('max used')")
+# Repeat the previous test, but increase the data size by `inflate_mult` times.
+
+N <- c(1, 2, 4, 8)   # 2^(0:3)
+T1 <- sapply(N, fun, batch = FALSE, times = 3, inflate_mult = 16)
+T2 <- sapply(N, fun, batch = TRUE, times = 3, inflate_mult = 16)
+
+df <- tibble(`# Cores` = c(N, N), `Time (s)` = c(T1, T2), 
+             Batched = rep(c(FALSE, TRUE), each = length(N)))
+
+ggplot(df, aes(`# Cores`, `Time (s)`, color = Batched)) + 
+       geom_line() + theme_light()
 ```
 
-Rendering this Rmd document to HTML used 0.23 Gbytes RAM ('max used').
+![](High_Performance_Computing-single_page_format_files/figure-html/ex04_inflate_mult-1.png)<!-- -->
 
+Batching with only two cores ran faster than using eight cores without batching.
