@@ -1,10 +1,13 @@
 ---
 title: "High Performance Computing"
 author: "Brian High"
-date: "May 13, 2025"
+date: "May 14, 2025"
 output:
   html_document:
     keep_md: yes
+    fig_caption: yes
+    fig_height: 5
+    fig_width: 7
 editor_options:
   chunk_output_type: console
 ---
@@ -244,7 +247,7 @@ memuse::Sys.meminfo()
 
 ```
 ## Totalram:  188.553 GiB 
-## Freeram:   159.314 GiB
+## Freeram:   150.353 GiB
 ```
 
 ``` r
@@ -259,7 +262,7 @@ system(cmd[[.Platform$OS.type]], intern = TRUE)   # Not run for user privacy
 
 ```
 ## [1] "Filesystem      Size  Used Avail Use% Mounted on"      
-## [2] "gpfs            2.7P  2.3P  452T  84% /mmfs1/home/high"
+## [2] "gpfs            2.7P  2.3P  451T  84% /mmfs1/home/high"
 ```
 
 **Discussion**: Compare the amount of free memory (RAM) with available storage. 
@@ -379,13 +382,14 @@ df <- tibble(`# Cores` = c(N, N), `Time (s)` = c(T1, T2),
 
 g <- ggplot(df, aes(`# Cores`, `Time (s)`, color = Batched)) + 
   geom_line() + theme_light() + 
-  ggtitle(paste(c('Multi-core test of robustbase::covMcd() with MASS::Cars93', 
-                  'data on node', Sys.info()["nodename"]), collapse = ' '))
+  ggtitle('Multi-core test of robustbase::covMcd()', 
+          subtitle = paste(c('with MASS::Cars93 data on node', 
+                             Sys.info()["nodename"]), collapse = ' '))
 ```
 
 Batching by number of cores can help improve processing speed.
 
-![Multi-core test with batching](High_Performance_Computing-single_page_format_files/figure-html/ex04-1.png)
+![Figure 1. Multi-core test comparing the processing of unbatched and batched data with various numbers of CPU cores.](High_Performance_Computing-single_page_format_files/figure-html/ex04-1.png)
 
 ## Batching by number of cores
 
@@ -431,16 +435,17 @@ df <- tibble(`# Cores` = c(N, N), `Time (s)` = c(T1, T2),
 
 g <- ggplot(df, aes(`# Cores`, `Time (s)`, color = Batched)) + 
   geom_line() + theme_light() + 
-  ggtitle(paste(c('Multi-core test of robustbase::covMcd() with MASS::Cars93', 
-                  'data on node', Sys.info()["nodename"]), collapse = ' '))
+  ggtitle('Multi-core test of robustbase::covMcd()', 
+          subtitle = paste(c('with MASS::Cars93 data on node', 
+                             Sys.info()["nodename"]), collapse = ' '))
 ```
 
 Batching with only two cores ran faster than using eight cores without batching.
 
-![Multi-core test with inflated data](High_Performance_Computing-single_page_format_files/figure-html/ex04_inflate_mult-1.png)
+![Figure 2. Multi-core test comparing the processing of batched and inflated data using various numbers of CPU cores.](High_Performance_Computing-single_page_format_files/figure-html/ex04_inflate_mult-1.png)
 
 ------------------------------------------------------------------------------
 
 NOTE: This document was rendered on a single UW hyak "klone" node with 16 CPU 
-cores and 3 GB RAM allocated for this session. The session was launched with 
-Open OnDemand from https://ondemand.hyak.uw.edu.
+cores and 3 GB RAM allocated. The session was launched with Open OnDemand from 
+https://ondemand.hyak.uw.edu.

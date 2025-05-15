@@ -1,10 +1,13 @@
 ---
 title: "High Performance Computing"
 author: "Brian High"
-date: "May 13, 2025"
+date: "May 14, 2025"
 output:
   html_document:
     keep_md: yes
+    fig_caption: yes
+    fig_height: 5
+    fig_width: 7
 editor_options:
   chunk_output_type: console
 ---
@@ -347,13 +350,14 @@ df <- tibble(`# Cores` = c(N, N), `Time (s)` = c(T1, T2),
 
 g <- ggplot(df, aes(`# Cores`, `Time (s)`, color = Batched)) + 
   geom_line() + theme_light() + 
-  ggtitle(paste(c('Multi-core test of robustbase::covMcd() with MASS::Cars93', 
-                  'data on node', Sys.info()["nodename"]), collapse = ' '))
+  ggtitle('Multi-core test of robustbase::covMcd()', 
+          subtitle = paste(c('with MASS::Cars93 data on node', 
+                             Sys.info()["nodename"]), collapse = ' '))
 ```
 
 Batching by number of cores can help improve processing speed.
 
-```{r ex04, echo=FALSE, fig.cap="Multi-core test with batching"}
+```{r ex04, echo=FALSE, fig.cap="Figure 1. Multi-core test comparing the processing of unbatched and batched data with various numbers of CPU cores."}
 g
 ```
 
@@ -395,18 +399,19 @@ df <- tibble(`# Cores` = c(N, N), `Time (s)` = c(T1, T2),
 
 g <- ggplot(df, aes(`# Cores`, `Time (s)`, color = Batched)) + 
   geom_line() + theme_light() + 
-  ggtitle(paste(c('Multi-core test of robustbase::covMcd() with MASS::Cars93', 
-                  'data on node', Sys.info()["nodename"]), collapse = ' '))
+  ggtitle('Multi-core test of robustbase::covMcd()', 
+          subtitle = paste(c('with MASS::Cars93 data on node', 
+                             Sys.info()["nodename"]), collapse = ' '))
 ```
 
 Batching with only two cores ran faster than using eight cores without batching.
 
-```{r ex04_inflate_mult, fig.cap="Multi-core test with inflated data", echo=FALSE}
+```{r ex04_inflate_mult, fig.cap="Figure 2. Multi-core test comparing the processing of batched and inflated data using various numbers of CPU cores.", echo=FALSE}
 g
 ```
 
 ------------------------------------------------------------------------------
 
 NOTE: This document was rendered on a single UW hyak "klone" node with 16 CPU 
-cores and 3 GB RAM allocated for this session. The session was launched with 
-Open OnDemand from https://ondemand.hyak.uw.edu.
+cores and 3 GB RAM allocated. The session was launched with Open OnDemand from 
+https://ondemand.hyak.uw.edu.
