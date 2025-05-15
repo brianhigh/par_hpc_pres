@@ -231,7 +231,7 @@ cmd <- list(
     windows = paste('powershell -command', 
       "$h = $ENV:HOMEDRIVE -replace '.{1}$' 
        Get-PSDrive $h | ? { $_.Provider.Name -eq 'FileSystem' }"))
-# system(cmd[[.Platform$OS.type]], intern = TRUE)   # Not run for user privacy
+system(cmd[[.Platform$OS.type]], intern = TRUE)   # Not run for user privacy
 ```
 
 **Discussion**: Compare the amount of free memory (RAM) with available storage. 
@@ -308,9 +308,9 @@ Is there a "sweet spot", beyond which adding more cores is not really worth it?
 
 ## Exercise #4: Parallel processing (hint)
 
-First, let's make a "wrapper" function, `fun()` to run `rc()` using n cores. We
-will add a few new features, such as the option to group the data into n batches 
-and to use `microbenchmark()` allowing us to replicate each test run `times` 
+First, let's make a "wrapper" function, `fun()` to run `rc()` using `n` cores. 
+We will add a few new features, such as the option to group the data into `n` 
+batches and to use `microbenchmark()` so we can replicate each test run `times` 
 times to get execution time averages.
 
 ```{r}
@@ -336,7 +336,7 @@ number of cores to supply to the function as `n`. We will use a series of powers
 of two, so that we can compare the doubling and redoubling of the number of 
 cores used in each test.
 
-```{r ex04}
+```{r}
 # Time the running of a task with varying number of CPU cores, then plot.
 N <- c(1, 2, 4, 8)   # 2^(0:3)
 T1 <- sapply(N, fun, batch = FALSE)
@@ -345,17 +345,23 @@ T2 <- sapply(N, fun, batch = TRUE)
 df <- tibble(`# Cores` = c(N, N), `Time (s)` = c(T1, T2), 
              Batched = rep(c(FALSE, TRUE), each = length(N)))
 
-ggplot(df, aes(`# Cores`, `Time (s)`, color = Batched)) + 
-       geom_line() + theme_light()
+g <- ggplot(df, aes(`# Cores`, `Time (s)`, color = Batched)) + 
+  geom_line() + theme_light() + 
+  ggtitle(paste(c('Multi-core test of robustbase::covMcd() with MASS::Cars93', 
+                  'data on node', Sys.info()["nodename"]), collapse = ' '))
+```
+
+Batching by number of cores can help improve processing speed.
+
+```{r ex04, echo=FALSE, fig.cap="Multi-core test with batching"}
+g
 ```
 
 ## Batching by number of cores
 
-Batching is a way to reduce overhead. You may have noticed that batching may 
-help a little. 
-
-If the task used a larger dataset, and therefore more memory (RAM), batching 
-would have provided an even greater performance boost.
+Batching is one way to reduce overhead. If the task uses a larger dataset, and 
+therefore more memory (RAM), batching will provide an even greater performance 
+boost.
 
 For example, consider the MASS::Cars93 dataset that we are using for this test. 
 We can compare the amount of memory used when we increase the size 16 times.
@@ -378,7 +384,7 @@ about five times.
 
 Let's try the multi-core test again, but with the data size inflated 16 times.
 
-```{r ex04_inflate_mult}
+```{r}
 # Repeat the previous test, but increase the data size by `inflate_mult` times.
 N <- c(1, 2, 4, 8)   # 2^(0:3)
 T1 <- sapply(N, fun, batch = FALSE, times = 3, inflate_mult = 16)
@@ -387,8 +393,20 @@ T2 <- sapply(N, fun, batch = TRUE, times = 3, inflate_mult = 16)
 df <- tibble(`# Cores` = c(N, N), `Time (s)` = c(T1, T2), 
              Batched = rep(c(FALSE, TRUE), each = length(N)))
 
-ggplot(df, aes(`# Cores`, `Time (s)`, color = Batched)) + 
-       geom_line() + theme_light()
+g <- ggplot(df, aes(`# Cores`, `Time (s)`, color = Batched)) + 
+  geom_line() + theme_light() + 
+  ggtitle(paste(c('Multi-core test of robustbase::covMcd() with MASS::Cars93', 
+                  'data on node', Sys.info()["nodename"]), collapse = ' '))
 ```
 
 Batching with only two cores ran faster than using eight cores without batching.
+
+```{r ex04_inflate_mult, fig.cap="Multi-core test with inflated data", echo=FALSE}
+g
+```
+
+------------------------------------------------------------------------------
+
+NOTE: This document was rendered on a single UW hyak "klone" node with 16 CPU 
+cores and 3 GB RAM allocated for this session. The session was launched with 
+Open OnDemand from https://ondemand.hyak.uw.edu.

@@ -166,8 +166,8 @@ R.version[c('version.string', 'platform')]
 ```
 
 ```
-##                _                                          
-## version.string R version 4.2.2 Patched (2022-11-10 r83330)
+##                _                           
+## version.string R version 4.4.2 (2024-10-31)
 ## platform       x86_64-pc-linux-gnu
 ```
 
@@ -234,7 +234,7 @@ benchmarkme::get_cpu()$no_of_cores
 ```
 
 ```
-## [1] 10
+## [1] 40
 ```
 
 ``` r
@@ -243,8 +243,8 @@ memuse::Sys.meminfo()
 ```
 
 ```
-## Totalram:  157.207 GiB 
-## Freeram:   149.772 GiB
+## Totalram:  188.553 GiB 
+## Freeram:   159.314 GiB
 ```
 
 ``` r
@@ -254,7 +254,12 @@ cmd <- list(
     windows = paste('powershell -command', 
       "$h = $ENV:HOMEDRIVE -replace '.{1}$' 
        Get-PSDrive $h | ? { $_.Provider.Name -eq 'FileSystem' }"))
-# system(cmd[[.Platform$OS.type]], intern = TRUE)   # Not run for user privacy
+system(cmd[[.Platform$OS.type]], intern = TRUE)   # Not run for user privacy
+```
+
+```
+## [1] "Filesystem      Size  Used Avail Use% Mounted on"      
+## [2] "gpfs            2.7P  2.3P  452T  84% /mmfs1/home/high"
 ```
 
 **Discussion**: Compare the amount of free memory (RAM) with available storage. 
@@ -333,9 +338,9 @@ Is there a "sweet spot", beyond which adding more cores is not really worth it?
 
 ## Exercise #4: Parallel processing (hint)
 
-First, let's make a "wrapper" function, `fun()` to run `rc()` using n cores. We
-will add a few new features, such as the option to group the data into n batches 
-and to use `microbenchmark()` allowing us to replicate each test run `times` 
+First, let's make a "wrapper" function, `fun()` to run `rc()` using `n` cores. 
+We will add a few new features, such as the option to group the data into `n` 
+batches and to use `microbenchmark()` so we can replicate each test run `times` 
 times to get execution time averages.
 
 
@@ -372,19 +377,21 @@ T2 <- sapply(N, fun, batch = TRUE)
 df <- tibble(`# Cores` = c(N, N), `Time (s)` = c(T1, T2), 
              Batched = rep(c(FALSE, TRUE), each = length(N)))
 
-ggplot(df, aes(`# Cores`, `Time (s)`, color = Batched)) + 
-       geom_line() + theme_light()
+g <- ggplot(df, aes(`# Cores`, `Time (s)`, color = Batched)) + 
+  geom_line() + theme_light() + 
+  ggtitle(paste(c('Multi-core test of robustbase::covMcd() with MASS::Cars93', 
+                  'data on node', Sys.info()["nodename"]), collapse = ' '))
 ```
 
-![](High_Performance_Computing-single_page_format_files/figure-html/ex04-1.png)<!-- -->
+Batching by number of cores can help improve processing speed.
+
+![Multi-core test with batching](High_Performance_Computing-single_page_format_files/figure-html/ex04-1.png)
 
 ## Batching by number of cores
 
-Batching is a way to reduce overhead. You may have noticed that batching may 
-help a little. 
-
-If the task used a larger dataset, and therefore more memory (RAM), batching 
-would have provided an even greater performance boost.
+Batching is one way to reduce overhead. If the task uses a larger dataset, and 
+therefore more memory (RAM), batching will provide an even greater performance 
+boost.
 
 For example, consider the MASS::Cars93 dataset that we are using for this test. 
 We can compare the amount of memory used when we increase the size 16 times.
@@ -422,10 +429,18 @@ T2 <- sapply(N, fun, batch = TRUE, times = 3, inflate_mult = 16)
 df <- tibble(`# Cores` = c(N, N), `Time (s)` = c(T1, T2), 
              Batched = rep(c(FALSE, TRUE), each = length(N)))
 
-ggplot(df, aes(`# Cores`, `Time (s)`, color = Batched)) + 
-       geom_line() + theme_light()
+g <- ggplot(df, aes(`# Cores`, `Time (s)`, color = Batched)) + 
+  geom_line() + theme_light() + 
+  ggtitle(paste(c('Multi-core test of robustbase::covMcd() with MASS::Cars93', 
+                  'data on node', Sys.info()["nodename"]), collapse = ' '))
 ```
 
-![](High_Performance_Computing-single_page_format_files/figure-html/ex04_inflate_mult-1.png)<!-- -->
-
 Batching with only two cores ran faster than using eight cores without batching.
+
+![Multi-core test with inflated data](High_Performance_Computing-single_page_format_files/figure-html/ex04_inflate_mult-1.png)
+
+------------------------------------------------------------------------------
+
+NOTE: This document was rendered on a single UW hyak "klone" node with 16 CPU 
+cores and 3 GB RAM allocated for this session. The session was launched with 
+Open OnDemand from https://ondemand.hyak.uw.edu.
