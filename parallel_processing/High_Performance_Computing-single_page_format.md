@@ -247,7 +247,7 @@ memuse::Sys.meminfo()
 
 ```
 ## Totalram:  188.553 GiB 
-## Freeram:   175.545 GiB
+## Freeram:   163.446 GiB
 ```
 
 ``` r
@@ -262,7 +262,7 @@ system(cmd[[.Platform$OS.type]], intern = TRUE)   # Not run for user privacy
 
 ```
 ## [1] "Filesystem      Size  Used Avail Use% Mounted on"      
-## [2] "gpfs            2.7P  2.3P  461T  84% /mmfs1/home/high"
+## [2] "gpfs            2.7P  2.3P  460T  84% /mmfs1/home/high"
 ```
 
 **Discussion**: Compare the amount of free memory (RAM) with available storage. 
@@ -289,9 +289,7 @@ Given this function:
 
 ``` r
 # Calculate robust covariance.
-rc <- function(x, df = MASS::Cars93[, c("Price", "Horsepower")]) {
-  list(x = x, y = robustbase::covMcd(df, cor = TRUE, nsamp = 2000)$cor[1, 2])
-}
+rc <- function(x) robustbase::covMcd(x, cor = TRUE, nsamp = 5000)$cor[1, 2]
 ```
 
 Execute the above function many times (just to create extra CPU load) with one 
@@ -300,7 +298,8 @@ and several CPU cores.
 
 ``` r
 # Set the iterations to use for the X parameter of lapply(), mclapply(), etc.
-X <- 1:400      # Simulate the data subsets which can be processed in parallel.
+df <- MASS::Cars93[, c("Price", "Horsepower", "Weight")]
+X <- lapply(1:64, function(x) df)  # Simulate the data subsets to be processed.
 
 # Single core version using `lapply()`
 system.time(result_single <- lapply(X, rc))
@@ -308,7 +307,7 @@ system.time(result_single <- lapply(X, rc))
 
 ```
 ##    user  system elapsed 
-##   8.009   0.051   8.076
+##   3.685   0.006   3.700
 ```
 
 ``` r
@@ -320,7 +319,7 @@ if (.Platform$OS.type == 'unix')
 
 ```
 ##    user  system elapsed 
-##   2.128   0.061   2.180
+##   1.898   0.041   1.019
 ```
 
 ``` r
@@ -332,7 +331,7 @@ system.time(result_multi <- parLapply(cl, X, rc))
 
 ```
 ##    user  system elapsed 
-##   0.004   0.000   2.224
+##   0.003   0.000   1.086
 ```
 
 ``` r
@@ -350,8 +349,6 @@ each core. This involves extra overhead. Let's see this in action.
 **Q4**: Do more cores improve speed linearly? If not, how would you describe it? 
 Is there a "sweet spot", beyond which adding more cores is not really worth it?
 
-## Exercise #4: Parallel processing (hint)
-
 First, let's make a "wrapper" function, `fun()` to run `rc()` using `n` cores. 
 We will add a few new features, such as the option to group the data into `n` 
 batches and to use `microbenchmark()` so we can replicate each test run `times` 
@@ -360,15 +357,19 @@ times to get execution time averages.
 
 ``` r
 # Define a function to automate a multi-core comparison test.
-fun <- function(n, .data, batch = FALSE, times = 1, ...) { 
+fun <- function(n, .data, batch = FALSE, times = 3, ...) { 
   # If batch == TRUE then split the dataset by the number of cores used.
-  if (batch & n > 1) .data <- split(.data, cut(.data, breaks = n))
+  if (batch & n > 1) {
+    items <- 1:length(.data)
+    split_items <- split(items, cut(items, breaks = n))
+    .data <- lapply(split_items, function(i) bind_rows(.data[i]))
+  }
   
   # Use microbenchmark to repeat the test (`times`) and return the mean in secs.
   res <- microbenchmark({ 
     # Use parLapply() instead of mclapply() to support Windows.
     cl <- makeCluster(n) 
-    system.time(res_n <- parLapply(cl, .data, rc, ...))
+    res_n <- parLapply(cl, .data, rc, ...)
     stopCluster(cl) 
   }, times = times, unit = 'seconds')
 
@@ -384,7 +385,7 @@ cores used in each test.
 
 ``` r
 # Time the running of a task with varying number of CPU cores, then plot.
-N <- c(1, 2, 4, 8)   # 2^(0:3)
+N <- c(1, 2, 4, 8, 16)   # 2^(0:4)
 T1 <- sapply(N, fun, .data = X, batch = FALSE)
 T2 <- sapply(N, fun, .data = X, batch = TRUE)
 
