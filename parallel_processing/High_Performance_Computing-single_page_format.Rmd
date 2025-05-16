@@ -310,10 +310,14 @@ times to get execution time averages.
 # Define a function to automate a multi-core comparison test.
 fun <- function(n, .data, batch = FALSE, times = 3, ...) { 
   # If batch == TRUE then split the dataset by the number of cores used.
-  if (batch & n > 1) {
-    items <- 1:length(.data)
-    split_items <- split(items, cut(items, breaks = n))
-    .data <- lapply(split_items, function(i) bind_rows(.data[i]))
+  if (batch) {
+    if (n > 1) {
+      items <- 1:length(.data)
+      split_items <- split(items, cut(items, breaks = n))
+      .data <- lapply(split_items, function(i) bind_rows(.data[i]))
+    } else {
+      .data <- list(bind_rows(.data))
+    }
   }
   
   # Use microbenchmark to repeat the test (`times`) and return the mean in secs.

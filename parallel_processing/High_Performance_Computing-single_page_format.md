@@ -247,7 +247,7 @@ memuse::Sys.meminfo()
 
 ```
 ## Totalram:  188.553 GiB 
-## Freeram:   163.446 GiB
+## Freeram:   175.928 GiB
 ```
 
 ``` r
@@ -307,7 +307,7 @@ system.time(result_single <- lapply(X, rc))
 
 ```
 ##    user  system elapsed 
-##   3.685   0.006   3.700
+##   3.735   0.017   3.814
 ```
 
 ``` r
@@ -319,7 +319,7 @@ if (.Platform$OS.type == 'unix')
 
 ```
 ##    user  system elapsed 
-##   1.898   0.041   1.019
+##   1.003   0.031   1.027
 ```
 
 ``` r
@@ -331,7 +331,7 @@ system.time(result_multi <- parLapply(cl, X, rc))
 
 ```
 ##    user  system elapsed 
-##   0.003   0.000   1.086
+##   0.002   0.001   1.102
 ```
 
 ``` r
@@ -359,10 +359,14 @@ times to get execution time averages.
 # Define a function to automate a multi-core comparison test.
 fun <- function(n, .data, batch = FALSE, times = 3, ...) { 
   # If batch == TRUE then split the dataset by the number of cores used.
-  if (batch & n > 1) {
-    items <- 1:length(.data)
-    split_items <- split(items, cut(items, breaks = n))
-    .data <- lapply(split_items, function(i) bind_rows(.data[i]))
+  if (batch) {
+    if (n > 1) {
+      items <- 1:length(.data)
+      split_items <- split(items, cut(items, breaks = n))
+      .data <- lapply(split_items, function(i) bind_rows(.data[i]))
+    } else {
+      .data <- list(bind_rows(.data))
+    }
   }
   
   # Use microbenchmark to repeat the test (`times`) and return the mean in secs.
