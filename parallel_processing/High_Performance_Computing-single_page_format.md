@@ -247,7 +247,7 @@ memuse::Sys.meminfo()
 
 ```
 ## Totalram:  188.553 GiB 
-## Freeram:   150.353 GiB
+## Freeram:   175.545 GiB
 ```
 
 ``` r
@@ -262,7 +262,7 @@ system(cmd[[.Platform$OS.type]], intern = TRUE)   # Not run for user privacy
 
 ```
 ## [1] "Filesystem      Size  Used Avail Use% Mounted on"      
-## [2] "gpfs            2.7P  2.3P  451T  84% /mmfs1/home/high"
+## [2] "gpfs            2.7P  2.3P  461T  84% /mmfs1/home/high"
 ```
 
 **Discussion**: Compare the amount of free memory (RAM) with available storage. 
@@ -282,30 +282,15 @@ Once you have developed a script to perform your task, you will want to:
 
 ## Parallel processing example
 
+
+
 Given this function:
 
 
 ``` r
-# Attach packages, installing as needed.
-pacman::p_load(parallel, robustbase, MASS, microbenchmark, tibble, ggplot2)
-
 # Calculate robust covariance.
-rc <- function(x, inflate_mult = 1) {
-  # Get data
-  data(Cars93, package = "MASS")
-  df <- Cars93
-  
-  # If inflate_mult > 1, combine multiple copies of df to simulate "big data".
-  if (inflate_mult > 1) {
-    df <- do.call('rbind', lapply(1:inflate_mult, function(i) df))
-  }
-  
-  # Process data
-  n <- nrow(df)
-  sapply(x, function(x) {  # Repeat for every x, just to create extra work.
-    robustbase::covMcd(Cars93[sample(1:n, replace=TRUE), 
-                  c("Price", "Horsepower")], cor = TRUE)$cor[1,2]
-  })
+rc <- function(x, df = MASS::Cars93[, c("Price", "Horsepower")]) {
+  list(x = x, y = robustbase::covMcd(df, cor = TRUE, nsamp = 2000)$cor[1, 2])
 }
 ```
 
@@ -314,18 +299,44 @@ and several CPU cores.
 
 
 ``` r
+# Set the iterations to use for the X parameter of lapply(), mclapply(), etc.
+X <- 1:400      # Simulate the data subsets which can be processed in parallel.
+
 # Single core version using `lapply()`
-system.time(result_single <- lapply(1:800, rc))
+system.time(result_single <- lapply(X, rc))
+```
 
+```
+##    user  system elapsed 
+##   8.009   0.051   8.076
+```
+
+``` r
 # Parallel (multi-core) version using `mclapply()` and `mc.cores = 4`
-system.time(result_multi <- mclapply(1:800, rc, mc.cores = 4))
-## NOTE: Windows does not support mclapply() with mc.cores > 1 (multi-core).
+# NOTE: Windows does not support mclapply() with mc.cores > 1 (multi-core).
+if (.Platform$OS.type == 'unix')
+  system.time(result_multi <- mclapply(X, rc, mc.cores = 4))
+```
 
+```
+##    user  system elapsed 
+##   2.128   0.061   2.180
+```
+
+``` r
 # Parallel (multi-core) version using `parLapply()` and `makeCluster(4)`
+# NOTE: May be faster or slower than mclapply(), depending on your situation.
 cl <- makeCluster(4) 
-system.time(result_multi <- parLapply(cl, 1:800, rc))
+system.time(result_multi <- parLapply(cl, X, rc))
+```
+
+```
+##    user  system elapsed 
+##   0.004   0.000   2.224
+```
+
+``` r
 stopCluster(cl)
-# This may be faster or slower than mclapply(), depending on your situation.
 ```
 
 ## Exercise #4: Parallel processing overhead
@@ -349,7 +360,7 @@ times to get execution time averages.
 
 ``` r
 # Define a function to automate a multi-core comparison test.
-fun <- function(n, .data = 1:800, batch = FALSE, times = 1, ...) { 
+fun <- function(n, .data, batch = FALSE, times = 1, ...) { 
   # If batch == TRUE then split the dataset by the number of cores used.
   if (batch & n > 1) .data <- split(.data, cut(.data, breaks = n))
   
@@ -374,13 +385,13 @@ cores used in each test.
 ``` r
 # Time the running of a task with varying number of CPU cores, then plot.
 N <- c(1, 2, 4, 8)   # 2^(0:3)
-T1 <- sapply(N, fun, batch = FALSE)
-T2 <- sapply(N, fun, batch = TRUE)
+T1 <- sapply(N, fun, .data = X, batch = FALSE)
+T2 <- sapply(N, fun, .data = X, batch = TRUE)
 
-df <- tibble(`# Cores` = c(N, N), `Time (s)` = c(T1, T2), 
-             Batched = rep(c(FALSE, TRUE), each = length(N)))
+df_g <- tibble(`# Cores` = c(N, N), `Time (s)` = c(T1, T2), 
+               Batched = rep(c(FALSE, TRUE), each = length(N)))
 
-g <- ggplot(df, aes(`# Cores`, `Time (s)`, color = Batched)) + 
+g <- ggplot(df_g, aes(`# Cores`, `Time (s)`, color = Batched)) + 
   geom_line() + theme_light() + 
   ggtitle('Multi-core test of robustbase::covMcd()', 
           subtitle = paste(c('with MASS::Cars93 data on node', 
@@ -390,59 +401,6 @@ g <- ggplot(df, aes(`# Cores`, `Time (s)`, color = Batched)) +
 Batching by number of cores can help improve processing speed.
 
 ![Figure 1. Multi-core test comparing the processing of unbatched and batched data with various numbers of CPU cores.](High_Performance_Computing-single_page_format_files/figure-html/ex04-1.png)
-
-## Batching by number of cores
-
-Batching is one way to reduce overhead. If the task uses a larger dataset, and 
-therefore more memory (RAM), batching will provide an even greater performance 
-boost.
-
-For example, consider the MASS::Cars93 dataset that we are using for this test. 
-We can compare the amount of memory used when we increase the size 16 times.
-
-
-``` r
-# Create a copy of the dataframe and measure its memory usage.
-df <- MASS::Cars93
-dfsz <- utils::object.size(df)
-
-# Combine 16 copies of the dataframe and measure its memory usage.
-df <- do.call('rbind', lapply(1:16, function(i) df))
-dfszinf <- utils::object.size(df)
-
-# Calculate the % increase in memory usage after combining 16 copies of Cars93.
-paste0(c(round((100 * (dfszinf - dfsz)/dfsz), 1)), '%')
-```
-
-```
-## [1] "502.1%"
-```
-
-Combining 16 copies of the Cars93 dataset increased the memory used by 
-about five times.
-
-Let's try the multi-core test again, but with the data size inflated 16 times.
-
-
-``` r
-# Repeat the previous test, but increase the data size by `inflate_mult` times.
-N <- c(1, 2, 4, 8)   # 2^(0:3)
-T1 <- sapply(N, fun, batch = FALSE, times = 3, inflate_mult = 16)
-T2 <- sapply(N, fun, batch = TRUE, times = 3, inflate_mult = 16)
-
-df <- tibble(`# Cores` = c(N, N), `Time (s)` = c(T1, T2), 
-             Batched = rep(c(FALSE, TRUE), each = length(N)))
-
-g <- ggplot(df, aes(`# Cores`, `Time (s)`, color = Batched)) + 
-  geom_line() + theme_light() + 
-  ggtitle('Multi-core test of robustbase::covMcd()', 
-          subtitle = paste(c('with MASS::Cars93 data on node', 
-                             Sys.info()["nodename"]), collapse = ' '))
-```
-
-Batching with only two cores ran faster than using eight cores without batching.
-
-![Figure 2. Multi-core test comparing the processing of batched and inflated data using various numbers of CPU cores.](High_Performance_Computing-single_page_format_files/figure-html/ex04_inflate_mult-1.png)
 
 ------------------------------------------------------------------------------
 
