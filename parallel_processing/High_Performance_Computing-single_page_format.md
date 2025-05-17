@@ -1,13 +1,14 @@
 ---
 title: "High Performance Computing"
 author: "Brian High"
-date: "May 14, 2025"
+date: "May 17, 2025"
 output:
   html_document:
     keep_md: yes
     fig_caption: yes
-    fig_height: 5
-    fig_width: 7
+    fig_width: 5
+    fig_height: 3
+    smaller: yes
 editor_options:
   chunk_output_type: console
 ---
@@ -237,7 +238,7 @@ benchmarkme::get_cpu()$no_of_cores
 ```
 
 ```
-## [1] 24
+## [1] 12
 ```
 
 ``` r
@@ -246,9 +247,14 @@ memuse::Sys.meminfo()
 ```
 
 ```
-## Totalram:  125.797 GiB 
-## Freeram:   116.628 GiB
+## Totalram:  15.367 GiB 
+## Freeram:    8.250 GiB
 ```
+
+## Exercise #3: Know your resources (cont'd)
+
+**Q3** (continued): What about available storage (HDD, SSD, etc.) space?
+
 
 ``` r
 # Find available storage on home disk (or volume)
@@ -261,8 +267,8 @@ system(cmd[[.Platform$OS.type]], intern = TRUE)   # Not run for user privacy
 ```
 
 ```
-## [1] "Filesystem                         Size  Used Avail Use% Mounted on"
-## [2] "/dev/mapper/ubuntu--vg-ubuntu--lv  203G  121G   72G  63% /"
+## [1] "Filesystem                  Size  Used Avail Use% Mounted on"
+## [2] "rpool/USERDATA/home_zhd6vk  437G  412G   26G  95% /home"
 ```
 
 **Discussion**: Compare the amount of free memory (RAM) with available storage. 
@@ -282,66 +288,75 @@ Once you have developed a script to perform your task, you will want to:
 
 ## Parallel processing example
 
-Load packages then prepare a test dataset and function.
+Load packages and create a test function to be "computationally expensive".
 
 
 ``` r
 # Attach packages, installing as needed.
-pacman::p_load(parallel, robustbase, MASS, microbenchmark, 
-               tibble, dplyr, purrr, ggplot2)
+pacman::p_load(rsample, parallel, robustbase, MASS, microbenchmark, ggplot2)
 
-# Load a test dataset.
-data(Cars93, package = "MASS")
-df <- Cars93[, c("Price", "Horsepower", "Weight")]
-
-# Define a function to run a "computationally expensive" calculation.
-rc <- function(X = 1, df = NULL, ...) {
-  if (is.null(df)) df <- MASS::Cars93[, c("Price", "Horsepower", "Weight")]
+# Define a function to perform a "computationally expensive" calculation.
+rc <- function(X, scale = 1, ...) {  # `scale` is # of times to duplicate data.
+  df <- MASS::Cars93[, c("Price", "Horsepower", "Weight")]
+  if (scale > 1)
+    df <- df[sample(rep(seq_len(nrow(df)), times = scale), replace=TRUE), ]
   sapply(X, function(x) robustbase::covMcd(df, cor = TRUE, ...)$cor[1, 2])
 }
 ```
 
-Execute the above function many times (just to create extra CPU load) with one 
+## Parallel processing example (cont'd)
+
+Define test parameters. These can be adjusted to simulate various scenarios.
+
+
+``` r
+# Set the number of "runs" (executions) of test function `rc()`.
+nruns <- 800
+X <- 1:nruns
+
+# Set the number of times to duplicate the data to simulate "bigger" data.
+scale <- 8
+
+# Set the number of "trials" to use for the "nsamp" parameter of covMcd().
+nsamp <- 64    # If too small, multi-core "overhead" may exceed benefits.
+```
+
+## Parallel processing example (cont'd)
+
+Execute the `rc()` function many times (just to create extra CPU load) with one 
 and several CPU cores.
 
 
 ``` r
-# Set the values to use for the "X" parameter of lapply(), mclapply(), etc.
-nruns <- 400  # Max. number of "runs" (executions) of test function `rc()`.
-X = 1:nruns   # Sequence of 1 to nruns, which serves as a run iterator.
-
-# Set the number of "trials" to use for the "nsamp" parameter used by covMcd().
-nsamp <- 400  # If too small, multi-core "overhead" may exceed benefits.
-
 # Single core version using `lapply()`
-system.time(result_single <- lapply(X, rc, df, nsamp = nsamp))
+system.time(res <- lapply(X, rc, scale = scale, nsamp = nsamp))
 ```
 
 ```
 ##    user  system elapsed 
-##   2.828   0.031   2.859
+##   6.481   0.005   6.488
 ```
 
 ``` r
 # Parallel (multi-core) version using `mclapply()` and `mc.cores = 4` (4 cores)
 if (.Platform$OS.type == 'unix')  # Windows does not support mc.cores > 1
-  system.time(result_multi <- mclapply(X, rc, df, nsamp = nsamp, mc.cores = 4))
+  system.time(res <- mclapply(X, rc, scale = scale, nsamp = nsamp, mc.cores = 4))
 ```
 
 ```
 ##    user  system elapsed 
-##   0.744   0.097   0.836
+##   4.914   0.154   1.747
 ```
 
 ``` r
 # Parallel (multi-core) version using `parLapply()` and `makeCluster(4)`
 cl <- makeCluster(4)        # Use 4 cores
-system.time(result_multi <- parLapply(cl, X, rc, df, nsamp = nsamp))
+system.time(res <- parLapply(cl, X, rc, scale = scale, nsamp = nsamp))
 ```
 
 ```
 ##    user  system elapsed 
-##   0.004   0.000   0.815
+##   0.003   0.000   1.780
 ```
 
 ``` r
@@ -353,15 +368,17 @@ stopCluster(cl)
 As you scale to more CPU cores, R will need to copy itself and your data to 
 each core. This involves extra overhead. Let's see this in action.
 
-- Run the previous example in RStudio and note your execution times.
+- Run the previous example and note your execution times.
 - Try using different number of cores (up to 8) and compare the resulting times.
 
 **Q4**: Do more cores improve speed linearly? If not, how would you describe it? 
 Is there a "sweet spot", beyond which adding more cores is not really worth it?
 
-## Parallel processing overhead test function
+## Parallel overhead test functions
 
-First, let's make a "wrapper" function, `fun()` to run `rc()` using `n` cores. 
+First, let's make a "wrapper" function, `multicore_test()` to run `rc()` 
+using `n` cores. 
+
 We will add a few new features, such as the option to group the data into `n` 
 batches and to use `microbenchmark()` so we can replicate each test run `times` 
 times to get execution time averages.
@@ -369,35 +386,45 @@ times to get execution time averages.
 
 ``` r
 # Define a function to automate a multi-core comparison test.
-multicore_test <- function(n, X, df, batch = FALSE, times = 3, ...) { 
+multicore_test <- function(n, X, batch = FALSE, times = 3, ...) { 
   if (batch & n > 1) X <- split(X, cut(X, breaks = n))
   res <- microbenchmark({ cl <- makeCluster(n) 
-                          res_n <- parLapply(cl, X, rc, df, ...)
+                          res_n <- parLapply(cl, X, rc, ...)
                           stopCluster(cl) 
                         }, times = times, unit = 'seconds')
   return(mean(res$time)/10^9)
 }
 ```
 
-## Parallel processing overhead plotting function
+## Parallel overhead test functions (cont'd)
 
-Now we can run this function `length(N)` times, where `N` is a vector of the 
-number of cores to supply to the function as `n`. We will use a series of powers 
-of two, so that we can compare the doubling and redoubling of the number of 
-cores used in each test.
+We can run the `multicore_test()` function `length(N)` times, where `N` is a 
+vector of the number of cores to supply to the function as `n`. We will use a 
+series of powers of two, so that we can compare the doubling and redoubling of 
+the number of cores used in each test.
 
 
 ``` r
-# Define a function to run a task with varying number of CPU cores, then plot.
-make_plot <-function(X, df, N = c(1, 2, 4, 8), ...) {
+# Define a function to run a task with varying number of CPU cores.
+run_test <- function(X, N = c(1, 2, 4, 8), ...) {
   times <- lapply(c(FALSE, TRUE), function(batch) {
-    sapply(N, multicore_test, X, df, batch = batch, ...)
+    sapply(N, multicore_test, X, batch = batch, ...)
   })
+  data.frame(`# Cores` = c(N, N), `Time (s)` = unlist(times), 
+             Batched = rep(c(FALSE, TRUE), each = length(N)), 
+             check.names = FALSE)
+}
+```
 
-  df_g <- tibble(`# Cores` = c(N, N), `Time (s)` = unlist(times), 
-                 Batched = rep(c(FALSE, TRUE), each = length(N)))
-  
-  ggplot(df_g, aes(`# Cores`, `Time (s)`, color = Batched)) + 
+## Parallel overhead test functions (cont'd)
+
+Lastly, create a function to make a plot from `run_test()` results.
+
+
+``` r
+# Define a function to plot `run_test()` results.
+make_plot <-function(df) {
+  ggplot(df, aes(`# Cores`, `Time (s)`, color = Batched)) + 
     geom_line() + theme_light() + 
     ggtitle('Multi-core test of robustbase::covMcd()', 
             subtitle = paste(c('with MASS::Cars93 data on node', 
@@ -405,7 +432,7 @@ make_plot <-function(X, df, N = c(1, 2, 4, 8), ...) {
 }
 ```
 
-## Parallel processing overhead and batching
+## Parallel overhead and batching
 
 Batching by number of cores may improve processing speed by reducing overhead. 
 This effect may be more noticeable if resources are more limited, like on smaller 
@@ -413,7 +440,7 @@ systems like workstations (desktops) and mobile devices (laptops and tablets).
 
 
 ``` r
-make_plot(X, df, nsamp = nsamp)
+make_plot(run_test(X, nsamp = nsamp))
 ```
 
 ![Figure 1. Plot comparing unbatched and batched multi-core processing.](High_Performance_Computing-single_page_format_files/figure-html/ex04-1.png)
@@ -421,27 +448,29 @@ make_plot(X, df, nsamp = nsamp)
 ## Batching comparison with more work
 
 Here we repeat the previous experiment, but with more per-core processing 
-(4x more "trials" in this case).
+("trials"), but with less data (rows). As the increase is work is performed by 
+the `covMcd()` function running within each individual process, increasing it 
+should not have a significant impact on parallel processing overhead. So, 
+batching may not be as helpful as before.
 
 
 ``` r
-make_plot(X, df, nsamp = 4*nsamp)   # Increase number of "trials" by 4x.
+make_plot(run_test(X, scale = round(scale/8), nsamp = 8*nsamp))
 ```
 
-![Figure 2. Plot comparing unbatched and batched multi-core processing with 4x more "trials"](High_Performance_Computing-single_page_format_files/figure-html/ex04_more_processing-1.png)
+![Figure 2. Plot comparing unbatched and batched multi-core processing with more "trials" (work) and smaller data size (less memory overhead).](High_Performance_Computing-single_page_format_files/figure-html/ex04_more_processing-1.png)
 
 ## Batching comparison with more data
 
-And finally we perform the test with more data (4x more rows in this case).
+And finally, we repeat the test with more data (more rows), but fewer "trials". 
+Increasing data size increases the memory (RAM) required, which is a major 
+contributor to processing overhead. So, batching may improve performance more 
+than in the previous scenario.
 
 
 ``` r
-make_plot(X, map_df(1:4, ~ df), nsamp = nsamp)   # Increase data size by 4x.
+make_plot(run_test(X, scale = scale*8, nsamp = round(nsamp/8)))
 ```
 
-![Figure 3. Plot comparing unbatched and batched multi-core processing with 4x more data.](High_Performance_Computing-single_page_format_files/figure-html/ex04_more_data-1.png)
+![Figure 3. Plot comparing unbatched and batched multi-core processing with "bigger" data (more memory overhead) and fewer "trials".](High_Performance_Computing-single_page_format_files/figure-html/ex04_more_data-1.png)
 
-------------------------------------------------------------------------------
-
-NOTE: This document was rendered on a single UW SPH virtual server with 24 CPU 
-cores and 128 GB RAM allocated.

@@ -8,4 +8,4 @@ rendered into HTML slides using the "knit" feature of RStudio.
 
 A single-page version of the presentation can be viewed online:
 
-[High_Performance_Computing-single_page_format.md](https://github.com/brianhigh/par_hpc_pres/blob/main/parallel_processing/High_Performance_Computing-single_page_format.md)
+- [High_Performance_Computing-single_page_format.md](https://github.com/brianhigh/par_hpc_pres/blob/main/parallel_processing/High_Performance_Computing-single_page_format.md)

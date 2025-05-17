@@ -66,5 +66,5 @@ pkg_inst <- function(pkgs) {
 # Install packages, as needed
 pkgs <- c("parallel", "benchmarkme", "memuse", "robustbase", "MASS", "here", 
           "tibble", "dplyr", "tidyr", "purrr", "furrr", "ggplot2", "broom", 
-          "nycflights13", "microbenchmark", "tictoc", "pacman")
+          "nycflights13", "microbenchmark", "tictoc", "pacman", "rsample")
 pkg_inst(pkgs)
