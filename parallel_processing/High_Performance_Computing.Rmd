@@ -343,10 +343,13 @@ times to get execution time averages.
 # Define a function to automate a multi-core comparison test.
 multicore_test <- function(n, X, batch = FALSE, times = 3, ...) { 
   if (batch & n > 1) X <- split(X, cut(X, breaks = n))
-  res <- microbenchmark({ cl <- makeCluster(n) 
-                          res_n <- parLapply(cl, X, rc, ...)
-                          stopCluster(cl) 
-                        }, times = times, unit = 'seconds')
+  res <- suppressWarnings(
+    microbenchmark({ 
+      cl <- makeCluster(n) 
+      res_n <- parLapply(cl, X, rc, ...)
+      stopCluster(cl) 
+    }, times = times, unit = 'seconds')
+  )
   return(mean(res$time)/10^9)
 }
 ```

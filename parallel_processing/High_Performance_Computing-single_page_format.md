@@ -248,7 +248,7 @@ memuse::Sys.meminfo()
 
 ```
 ## Totalram:  15.367 GiB 
-## Freeram:    7.704 GiB
+## Freeram:    6.702 GiB
 ```
 
 ## Exercise #3: Know your resources (cont'd)
@@ -337,7 +337,7 @@ system.time(res <- lapply(X, rc, scale = scale, nsamp = nsamp))
 
 ```
 ##    user  system elapsed 
-##  20.440   0.022  20.507
+##  20.490   0.012  20.512
 ```
 
 ``` r
@@ -348,7 +348,7 @@ if (.Platform$OS.type == 'unix')  # Windows does not support mc.cores > 1
 
 ```
 ##    user  system elapsed 
-##   5.392   0.141   5.525
+##  16.123   0.354   5.531
 ```
 
 ``` r
@@ -359,7 +359,7 @@ system.time(res <- parLapply(cl, X, rc, scale = scale, nsamp = nsamp))
 
 ```
 ##    user  system elapsed 
-##   0.004   0.000   5.287
+##   0.003   0.001   5.280
 ```
 
 ``` r
@@ -391,10 +391,13 @@ times to get execution time averages.
 # Define a function to automate a multi-core comparison test.
 multicore_test <- function(n, X, batch = FALSE, times = 3, ...) { 
   if (batch & n > 1) X <- split(X, cut(X, breaks = n))
-  res <- microbenchmark({ cl <- makeCluster(n) 
-                          res_n <- parLapply(cl, X, rc, ...)
-                          stopCluster(cl) 
-                        }, times = times, unit = 'seconds')
+  res <- suppressWarnings(
+    microbenchmark({ 
+      cl <- makeCluster(n) 
+      res_n <- parLapply(cl, X, rc, ...)
+      stopCluster(cl) 
+    }, times = times, unit = 'seconds')
+  )
   return(mean(res$time)/10^9)
 }
 ```
@@ -468,7 +471,7 @@ make_plot(run_test(X, scale = round(scale / mod_x), nsamp = mod_x * nsamp))
 ## Batching comparison with more data
 
 And finally, we repeat the test with more data (more rows), but fewer "trials". 
-Increasing data size increases the memory (RAM) required, which is a major 
+Increasing data size increases the memory (RAM) required, which is a significant 
 contributor to processing overhead. So, batching may improve performance more 
 than in the previous scenario.
 
