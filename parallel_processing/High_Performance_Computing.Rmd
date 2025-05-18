@@ -273,17 +273,20 @@ Load packages and create a test function to be "computationally expensive".
 pacman::p_load(rsample, parallel, robustbase, MASS, microbenchmark, ggplot2)
 
 # Define a function to perform a "computationally expensive" calculation.
-rc <- function(X, scale = 1, ...) {  # `scale` is # of times to duplicate data.
+# Ideally, it would resemble a "parallelizable" component of your data analysis.
+# In this example, we are just trying to make the computer do extra work.
+rc <- function(X, scale = 1, ...) { 
   df <- MASS::Cars93[, c("Price", "Horsepower", "Weight")]
-  if (scale > 1)
-    df <- df[sample(rep(seq_len(nrow(df)), times = scale), replace=TRUE), ]
-  sapply(X, function(x) robustbase::covMcd(df, cor = TRUE, ...)$cor[1, 2])
+  if (scale > 1) df <- df[rep(seq_len(nrow(df)), times = scale), ]
+  lapply(X, function(x) robustbase::covMcd(df, cor = TRUE, ...)$cor)
 }
 ```
 
 ## Parallel processing example (cont'd)
 
-Define test parameters. These can be adjusted to simulate various scenarios.
+Define test parameters. These can be adjusted to simulate various scenarios. To
+make results more comparable, set each of these to be evenly divisible by the 
+number of CPU cores you plan to use. This way you can avoid "remainders".
 
 ```{r}
 # Set the number of "runs" (executions) of test function `rc()`.
@@ -291,10 +294,10 @@ nruns <- 800
 X <- 1:nruns
 
 # Set the number of times to duplicate the data to simulate "bigger" data.
-scale <- 8
+scale <- 32
 
-# Set the number of "trials" to use for the "nsamp" parameter of covMcd().
-nsamp <- 64    # If too small, multi-core "overhead" may exceed benefits.
+# Set the number of "trials" to use for the "nsamp" parameter of `covMcd()`.
+nsamp <- 128    # If too small, multi-core "overhead" may exceed benefits.
 ```
 
 ## Parallel processing example (cont'd)
@@ -303,15 +306,15 @@ Execute the `rc()` function many times (just to create extra CPU load) with one
 and several CPU cores.
 
 ```{r}
-# Single core version using `lapply()`
+# Single core version using `lapply()`. Tune parameters so this takes < ~60s.
 system.time(res <- lapply(X, rc, scale = scale, nsamp = nsamp))
 
-# Parallel (multi-core) version using `mclapply()` and `mc.cores = 4` (4 cores)
+# Parallel (multi-core) version using `mclapply()` and `mc.cores = 4` (4 cores).
 if (.Platform$OS.type == 'unix')  # Windows does not support mc.cores > 1
   system.time(res <- mclapply(X, rc, scale = scale, nsamp = nsamp, mc.cores = 4))
 
-# Parallel (multi-core) version using `parLapply()` and `makeCluster(4)`
-cl <- makeCluster(4)        # Use 4 cores
+# Parallel (multi-core) version using `parLapply()` and `makeCluster(4)`.
+cl <- makeCluster(4)        # Use 4 cores.
 system.time(res <- parLapply(cl, X, rc, scale = scale, nsamp = nsamp))
 stopCluster(cl)
 ```
@@ -389,7 +392,8 @@ This effect may be more noticeable if resources are more limited, like on smalle
 systems like workstations (desktops) and mobile devices (laptops and tablets).
 
 ```{r ex04, fig.cap="Figure 1. Plot comparing unbatched and batched multi-core processing."}
-make_plot(run_test(X, nsamp = nsamp))
+# Tune parameters so run time decreases with more cores, unbatched & batched.
+make_plot(run_test(X, scale = scale, nsamp = nsamp))
 ```
 
 ![](img/ex04-1.png)
@@ -397,13 +401,14 @@ make_plot(run_test(X, nsamp = nsamp))
 ## Batching comparison with more work
 
 Here we repeat the previous experiment, but with more per-core processing 
-("trials"), but with less data (rows). As the increase is work is performed by 
+("trials"), and with less data (rows). As the increase in work is performed by 
 the `covMcd()` function running within each individual process, increasing it 
 should not have a significant impact on parallel processing overhead. So, 
 batching may not be as helpful as before.
 
 ```{r ex04_more_processing, fig.cap='Figure 2. Plot comparing unbatched and batched multi-core processing with more "trials" (work) and smaller data size (less memory overhead).'}
-make_plot(run_test(X, scale = round(scale/8), nsamp = 8*nsamp))
+mod_x <- 4    # Adjust the modification factor to change the scenario.
+make_plot(run_test(X, scale = round(scale / mod_x), nsamp = mod_x * nsamp))
 ```
 
 ![](img/ex04_more_processing-1.png)
@@ -411,12 +416,14 @@ make_plot(run_test(X, scale = round(scale/8), nsamp = 8*nsamp))
 ## Batching comparison with more data
 
 And finally, we repeat the test with more data (more rows), but fewer "trials". 
-Increasing data size increases the memory (RAM) required, which is a major 
+Increasing data size increases the memory (RAM) required, which is a significant 
 contributor to processing overhead. So, batching may improve performance more 
 than in the previous scenario.
 
 ```{r ex04_more_data, fig.cap='Figure 3. Plot comparing unbatched and batched multi-core processing with "bigger" data (more memory overhead) and fewer "trials".'}
-make_plot(run_test(X, scale = scale*8, nsamp = round(nsamp/8)))
+mod_x <- 4    # Adjust the modification factor to change the scenario.
+make_plot(run_test(X, scale = scale * mod_x, nsamp = round(nsamp / mod_x)))
 ```
 
 ![](img/ex04_more_data-1.png)
+
