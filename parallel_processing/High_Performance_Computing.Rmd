@@ -295,7 +295,7 @@ X <- 1:nruns
 ndupl <- 256
 
 # Set the number of "trials" to use for the "nsamp" parameter of `covMcd()`.
-nsamp <- 64    # If too small, multi-core "overhead" may exceed benefits.
+nsamp <- 128    # If too small, multi-core "overhead" may exceed benefits.
 ```
 
 ## Parallel processing example (cont'd)
@@ -304,7 +304,7 @@ Execute the `rc()` function many times (just to create extra CPU load) with one
 and several CPU cores.
 
 ```{r}
-# Single core version using `lapply()`. Tune parameters so this takes < ~30s.
+# Single core version using `lapply()`. Tune parameters so this takes < ~60s.
 system.time(res <- lapply(X, rc, ndupl = ndupl, nsamp = nsamp))
 
 # Parallel (multi-core) version using `mclapply()` and `mc.cores = 4` (4 cores).
@@ -389,22 +389,16 @@ make_plot <-function(df) {
 ## Parallel overhead and batching
 
 Batching by number of cores may improve processing speed by reducing overhead. 
-This effect may be more noticeable if resources are more limited, like on smaller 
-systems like workstations (desktops) and mobile devices (laptops and tablets).
 
 ```{r ex04, fig.cap="Figure 1. Plot comparing unbatched and batched multi-core processing."}
-# Tune parameters so run time decreases with more cores, unbatched & batched.
 make_plot(run_test(X, ndupl = ndupl, nsamp = nsamp))
 ```
 
 ![](img/ex04-1.png)
+
 ## Batching comparison with more work
 
-Here we repeat the previous experiment, but with more per-core processing 
-("trials") and less data. As the increase in work is performed by the `covMcd()` 
-function running within each individual process, increasing it should not have a 
-significant impact on parallel processing overhead. So, batching may not be as 
-helpful as before.
+Here we repeat the previous experiment, but with more "trials" and less data.
 
 ```{r ex04_more_processing, fig.cap='Figure 2. Plot comparing unbatched and batched multi-core processing with more "trials" (work) but less data.'}
 make_plot(run_test(X, ndupl = round(ndupl / 4), nsamp = nsamp * 4))
@@ -412,16 +406,15 @@ make_plot(run_test(X, ndupl = round(ndupl / 4), nsamp = nsamp * 4))
 
 ![](img/ex04_more_processing-1.png)
 
+
 ## Batching comparison with more data
 
 And finally, we repeat the test with more data (more rows) and less "trials". 
-Increasing data size increases the memory (RAM) required, which is a significant 
-contributor to processing overhead. So, batching may improve performance more 
-than in the previous scenario.
 
 ```{r ex04_more_data, fig.cap='Figure 3. Plot comparing unbatched and batched multi-core processing with "bigger" data (more memory overhead), but fewer "trials".'}
 make_plot(run_test(X, ndupl = ndupl * 4, nsamp = round(nsamp / 4)))
 ```
 
 ![](img/ex04_more_data-1.png)
+
 
